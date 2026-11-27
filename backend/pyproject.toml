@@ -1,0 +1,91 @@
+[project]
+name = "kaygpt-backend"
+version = "2.0.0"
+description = "KayGPT API: FastAPI + LangGraph agent with Gemini, Tavily, ChromaDB RAG and PostgreSQL persistence"
+license = "Apache-2.0"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    # Web
+    "fastapi==0.136.3",
+    "uvicorn[standard]==0.48.0",
+    "python-multipart==0.0.29",
+    "pydantic-settings>=2.6,<3",
+    "email-validator>=2.2,<3",
+    # Persistence
+    "sqlalchemy[asyncio]==2.0.50",
+    "alembic>=1.14,<2",
+    "psycopg[binary,pool]>=3.2,<4",
+    "langgraph-checkpoint-postgres>=3.2,<4",
+    # AI
+    "langchain==1.3.2",
+    "langchain-core==1.4.0",
+    "langgraph==1.2.2",
+    "langchain-google-genai==4.2.4",
+    "langchain-text-splitters==1.1.2",
+    "tavily-python==0.7.24",
+    "chromadb==1.5.9",
+    # Document parsing
+    "pypdf==6.12.2",
+    "docx2txt==0.9",
+    # Security / misc
+    "argon2-cffi>=23.1",
+    "certifi>=2024.8.30",
+]
+
+[project.optional-dependencies]
+s3 = ["boto3>=1.35,<2"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+    "httpx>=0.28",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "boto3>=1.35,<2",
+    "boto3-stubs[s3]>=1.35",
+]
+
+[tool.uv]
+package = false
+# Lock must install from wheels on Linux (Docker/Render) and on Intel + Apple Silicon macs.
+# Newer cryptography and onnxruntime (via chromadb) ship no Intel-macOS wheels.
+required-environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+constraint-dependencies = ["cryptography<49"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "S", "ASYNC", "SIM", "RUF", "PTH", "C4"]
+ignore = ["S101", "B008", "RUF012"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "S108", "S311", "ASYNC"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["alembic/versions/"]
+
+[[tool.mypy.overrides]]
+module = ["docx2txt", "chromadb.*", "tavily.*", "pypdf.*", "argon2.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "postgres: requires a PostgreSQL server (TEST_DATABASE_URL)",
+]
+filterwarnings = ["ignore::DeprecationWarning:chromadb.*"]

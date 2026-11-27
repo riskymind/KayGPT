@@ -1,0 +1,10 @@
+# Each service builds from its own directory (backend/, frontend/); this guards root-context builds.
+.git
+.env
+.env.*
+data
+uploads
+chroma_db
+**/node_modules
+**/.venv
+**/.next

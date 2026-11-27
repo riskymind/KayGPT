@@ -1,0 +1,63 @@
+# Full local stack: PostgreSQL + FastAPI + Next.js.
+#   cp .env.example .env   # add GOOGLE_API_KEY and TAVILY_API_KEY
+#   docker compose up --build
+# Open http://localhost:3000
+name: kaygpt
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: kaygpt
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kaygpt}
+      POSTGRES_DB: kaygpt
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kaygpt -d kaygpt"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      LLM_PROVIDER: ${LLM_PROVIDER:-gemini} # fake = offline demo without API keys
+      DATABASE_URL: postgresql+psycopg://kaygpt:${POSTGRES_PASSWORD:-kaygpt}@postgres:5432/kaygpt
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      BACKEND_URL: http://localhost:8000
+      CHROMA_PERSIST_DIRECTORY: /data/chroma
+      UPLOAD_DIR: /data/uploads
+      RUN_MIGRATIONS: "true"
+    volumes:
+      - backend-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: http://backend:8000
+        NEXT_PUBLIC_MAX_UPLOAD_MB: ${MAX_UPLOAD_SIZE_MB:-20}
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  backend-data: # Chroma index + uploaded files

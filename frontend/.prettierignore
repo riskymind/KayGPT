@@ -1,0 +1,6 @@
+.next
+node_modules
+pnpm-lock.yaml
+components/ui
+playwright-report
+test-results

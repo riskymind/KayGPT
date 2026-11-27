@@ -1,0 +1,23 @@
+# Development override: only PostgreSQL in Docker; run backend/frontend on the host with reload.
+#   docker compose -f docker-compose.dev.yml up -d
+name: kaygpt-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: kaygpt
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  postgres-dev-data:
